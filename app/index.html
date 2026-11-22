@@ -14,7 +14,7 @@
   var REPO = "Zalylex/salon-tv", done = false;
   function show(html, base) {
     if (done) return; done = true;
-    if (base) html = html.replace("<head>", '<head><base href="' + base + '">');
+    if (base) html = html.replace("<head>", '<head><base href="' + base + '"><script>window.SALON_SHA="' + base.split("@")[1].split("/")[0] + '";<\/script>');
     document.open(); document.write(html); document.close();
   }
   function get(url, headers, cb) {
