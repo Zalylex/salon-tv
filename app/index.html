@@ -184,10 +184,20 @@ body { font-family: "Manrope", "Helvetica Neue", Arial, sans-serif; }
     };
     ws.onerror = function () { if (!done) { done = true; clearTimeout(timer); toast("TizenBrew'a bağlanılamadı"); } };
   }
+  // Apps are opened through the TV's own local launcher service (port 8001), the same
+  // one a phone remote uses. tizen.application is not permitted inside TizenBrew modules.
+  var tvIP = "127.0.0.1";
+  (function () {
+    var x = new XMLHttpRequest();
+    x.open("GET", "http://" + location.host + "/");
+    x.onload = function () { var ip = (x.responseText || "").trim(); if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) tvIP = ip; };
+    x.send();
+  })();
   function launchApp(id, label) {
-    try {
-      tizen.application.launch(id, function () {}, function (e) { toast(label + " açılamadı"); });
-    } catch (e) { toast(label + " açılamadı"); }
+    var x = new XMLHttpRequest();
+    x.open("POST", "http://" + tvIP + ":8001/api/v2/applications/" + id);
+    x.setRequestHeader("Content-Type", "text/plain");
+    x.send("");
   }
   // find an installed app by its visible name (for apps whose id we don't know)
   function launchByName(pattern, label) {
