@@ -7,8 +7,8 @@
 //   /status, /ping
 //
 // Return to Salon TV: after an app we opened has been running, if it stops running
-// (the user backed out of it), bring TizenBrew to the front; its autolaunch shows Salon TV.
-// If the app is only hidden (Home / Source pressed) it keeps running, so we leave it alone.
+// leaves the screen and stays gone for 2.5s (Back, Home, Source), bring TizenBrew to the front;
+// its autolaunch shows Salon TV. The 0 key on Salon TV turns this off (e.g. for HDMI).
 var http = require('http');
 var url = require('url');
 var fs = require('fs');
@@ -82,18 +82,20 @@ function poll() {
         tvRequest('GET', '/api/v2/applications/' + id, function (err, code, body) {
             if (err || code !== 200 || !watched[id]) return;
             var info; try { info = JSON.parse(body); } catch (e) { return; }
-            if (info.running) { w.seen = true; return; }
-            if (!w.seen) return;                     // still starting up
-            delete watched[id];                      // the user left the app
-            if (!settings.returnHome) return;
-            // confirm twice, 1.5s apart, and only while the screen is on
+            if (info.visible) { w.seen = true; return; }
+            if (!w.seen || w.checking) return;       // still starting up, or already confirming
+            // the app left the screen: confirm it stays gone for 2.5s, and only while the TV is on
+            w.checking = true;
             setTimeout(function () {
                 tvRequest('GET', '/api/v2/applications/' + id, function (err2, code2, body2) {
+                    w.checking = false;
                     var again; try { again = JSON.parse(body2); } catch (e) { again = null; }
-                    if (err2 || !again || again.running) return;
-                    tvIsOn(function (on) { if (on) bringHome(); });
+                    if (err2 || !again || again.visible || !watched[id]) return;
+                    delete watched[id];
+                    if (!settings.returnHome) { lastEvent = 'left ' + id + ' (return off)'; return; }
+                    tvIsOn(function (on) { if (on) bringHome(); else lastEvent = 'left ' + id + ' (tv off)'; });
                 });
-            }, 1500);
+            }, 2500);
         });
     });
 }
