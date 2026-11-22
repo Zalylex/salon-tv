@@ -184,32 +184,39 @@ body { font-family: "Manrope", "Helvetica Neue", Arial, sans-serif; }
     };
     ws.onerror = function () { if (!done) { done = true; clearTimeout(timer); toast("TizenBrew'a bağlanılamadı"); } };
   }
-  // Apps are opened through the TV's own local launcher service (port 8001), the same
-  // one a phone remote uses. tizen.application is not permitted inside TizenBrew modules.
-  var tvIP = "127.0.0.1";
-  (function () {
+  // Apps are opened by this module's background service (service.js, port 8090), which runs
+  // with TizenBrew's launch permission. Fallback: the TV's local launcher on port 8001.
+  var SVC = "http://127.0.0.1:8090";
+  function get(u, cb) {
     var x = new XMLHttpRequest();
-    x.open("GET", "http://" + location.host + "/");
-    x.onload = function () { var ip = (x.responseText || "").trim(); if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) tvIP = ip; };
+    x.open("GET", u); x.timeout = 9000;
+    x.onload = function () { var d = null; try { d = JSON.parse(x.responseText); } catch (e) {} cb(d); };
+    x.onerror = x.ontimeout = function () { cb(null); };
     x.send();
-  })();
-  function launchApp(id, label) {
+  }
+  function restFallback(id) {
     var x = new XMLHttpRequest();
-    x.open("POST", "http://" + tvIP + ":8001/api/v2/applications/" + id);
-    x.setRequestHeader("Content-Type", "text/plain");
+    x.open("POST", "http://127.0.0.1:8001/api/v2/applications/" + id);
     x.send("");
   }
-  // find an installed app by its visible name (for apps whose id we don't know)
+  function launchApp(id, label) {
+    get(SVC + "/launch?id=" + encodeURIComponent(id), function (d) {
+      if (!d) { restFallback(id); toast(label + ": servis yok, yedek yol denendi", 4000); }
+      else if (!d.ok) toast(label + " açılamadı (" + d.error + ")", 6000);
+    });
+  }
+  var appsCache = null;
   function launchByName(pattern, label) {
-    try {
-      var re = new RegExp(pattern, "i");
-      tizen.application.getAppsInfo(function (list) {
-        for (var n = 0; n < list.length; n++) {
-          if (re.test(list[n].name || "")) { launchApp(list[n].id, label); return; }
-        }
-        toast(label + " bulunamadı");
-      }, function () { toast(label + " bulunamadı"); });
-    } catch (e) { toast(label + " bulunamadı"); }
+    var re = new RegExp(pattern, "i");
+    function pick(list) {
+      for (var n = 0; n < list.length; n++) if (re.test(list[n].name || "")) return launchApp(list[n].id, label);
+      toast(label + " bulunamadı", 4000);
+    }
+    if (appsCache) return pick(appsCache);
+    get(SVC + "/apps", function (d) {
+      if (!d || !d.ok) { toast(label + " bulunamadı (" + (d ? d.error : "servis yok") + ")", 6000); return; }
+      appsCache = d.apps; pick(appsCache);
+    });
   }
   function open(el) {
     toast(el.getAttribute("data-label") + " açılıyor…", 1500);
