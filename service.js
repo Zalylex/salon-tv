@@ -1,3 +1,8 @@
+// Salon TV service loader (TizenBrew runs this file). It asks GitHub for the newest commit,
+// downloads service-core.js pinned to that commit from jsDelivr and runs it. If anything
+// fails it runs the copy bundled below, so the service always starts.
+var https = require('https');
+function salonBundledCore() {
 // Salon TV background service. Runs inside TizenBrew's Node (v4, ES5 only) with TizenBrew's
 // Tizen privileges, so it can open other apps for the start screen page.
 // Listens on 127.0.0.1:8090:
@@ -131,3 +136,33 @@ var server = http.createServer(function (req, res) {
 });
 server.on('error', function () { /* port already taken by an earlier copy: that copy keeps serving */ });
 server.listen(8090, '127.0.0.1');
+
+}
+function salonGet(opts, cb) {
+    var done = false;
+    function fin(v) { if (!done) { done = true; cb(v); } }
+    try {
+        var req = https.get(opts, function (r) {
+            var b = '';
+            r.on('data', function (c) { b += c; });
+            r.on('end', function () { fin(r.statusCode === 200 ? b : null); });
+        });
+        req.on('error', function () { fin(null); });
+        req.setTimeout(6000, function () { req.abort(); fin(null); });
+    } catch (e) { fin(null); }
+}
+(function () {
+    var started = false;
+    function run(code) {
+        if (started) return; started = true;
+        if (code) { try { eval(code); return; } catch (e) { /* fall through to bundled */ } }
+        salonBundledCore();
+    }
+    setTimeout(function () { run(null); }, 12000);
+    salonGet({ host: 'api.github.com', path: '/repos/Zalylex/salon-tv/commits/main',
+               headers: { 'User-Agent': 'salon-tv', 'Accept': 'application/vnd.github.sha' } }, function (sha) {
+        sha = (sha || '').trim();
+        if (!/^[0-9a-f]{40}$/.test(sha)) return run(null);
+        salonGet({ host: 'cdn.jsdelivr.net', path: '/gh/Zalylex/salon-tv@' + sha + '/service-core.js' }, function (code) { run(code); });
+    });
+})();
