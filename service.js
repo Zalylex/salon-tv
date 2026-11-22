@@ -109,7 +109,7 @@ setInterval(poll, POLL_MS);
 var server = http.createServer(function (req, res) {
     var u = url.parse(req.url, true);
     if (u.pathname === '/ping') return send(res, 200, { ok: true });
-    if (u.pathname === '/status') return send(res, 200, { ok: true, returnHome: settings.returnHome, watching: Object.keys(watched), lastEvent: lastEvent });
+    if (u.pathname === '/status') return send(res, 200, { ok: true, v: '2.3', returnHome: settings.returnHome, watching: Object.keys(watched), lastEvent: lastEvent });
     if (u.pathname === '/return') {
         if (u.query.on === '1') settings.returnHome = true;
         else if (u.query.on === '0') settings.returnHome = false;

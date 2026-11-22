@@ -275,7 +275,7 @@ body { font-family: "Inter", "Helvetica Neue", Arial, sans-serif; -webkit-font-s
     else if (e.keyCode === 38) {   // Up: service status, for troubleshooting
       get(SVC + "/status", function (d) {
         if (!d) toast("Servis çalışmıyor", 5000);
-        else toast("Servis çalışıyor · dönüş " + (d.returnHome ? "açık" : "kapalı") + " · izlenen " + d.watching.length + (d.lastEvent ? " · son: " + d.lastEvent : ""), 7000);
+        else toast("Servis " + (d.v || "eski") + " çalışıyor · dönüş " + (d.returnHome ? "açık" : "kapalı") + " · izlenen " + d.watching.length + (d.lastEvent ? " · son: " + d.lastEvent : ""), 7000);
       });
     }
     else if (e.keyCode === 10009) { try { tizen.application.getCurrentApplication().exit(); } catch (z) {} }
