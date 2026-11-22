@@ -266,6 +266,12 @@ body { font-family: "Inter", "Helvetica Neue", Arial, sans-serif; -webkit-font-s
       setTimeout(function () { el.classList.remove("pressed"); }, 140);
       open(el); e.preventDefault();
     }
+    else if (e.keyCode === 48) {   // 0: turn "return to Salon TV" on/off
+      get(SVC + "/return", function (d) {
+        if (!d) toast("Servis hazır değil", 3000);
+        else toast(d.returnHome ? "Uygulamadan çıkınca Salon TV'ye dön: açık" : "Uygulamadan çıkınca Salon TV'ye dön: kapalı", 3500);
+      });
+    }
     else if (e.keyCode === 10009) { try { tizen.application.getCurrentApplication().exit(); } catch (z) {} }
   });
 })();
