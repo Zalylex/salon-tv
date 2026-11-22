@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Salon TV</title>
+<meta name="viewport" content="width=1920">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,500;12..96,700&family=Manrope:wght@400;500;600&display=swap">
+<style>
+/* Tizen 5.5 webview is an older Chromium: no container queries, aspect-ratio, inset or flex gap.
+   Everything is sized in vw against a 1920x1080 screen. */
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #17121f; color: #f3ece4; }
+body { font-family: "Manrope", "Helvetica Neue", Arial, sans-serif; }
+.disp { font-family: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif; }
+#bg {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  background:
+    radial-gradient(60% 75% at 72% -10%, rgba(242,182,107,.26), rgba(242,182,107,0) 65%),
+    radial-gradient(45% 60% at 10% 110%, rgba(232,138,138,.16), rgba(232,138,138,0) 70%),
+    #17121f;
+}
+#dust { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: .5; }
+.screen { position: absolute; left: 5vw; right: 5vw; top: 4.2vw; bottom: 3.6vw; }
+
+.time { font-weight: 300; font-size: 7.4vw; line-height: .9; letter-spacing: -0.03em; }
+.date { margin-top: 1.1vw; font-weight: 500; font-size: 1.25vw; color: #a89cae; letter-spacing: .14em; text-transform: uppercase; }
+.greet { margin-top: 2.2vw; font-size: 1.9vw; line-height: 1.3; max-width: 34vw; }
+.greet em { font-style: normal; color: #f2b66b; }
+
+.side { position: absolute; right: 0; top: 0; text-align: right; }
+.weather { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: flex-end; justify-content: flex-end; }
+.weather svg { width: 3.4vw; height: 3.4vw; margin-right: 1.2vw; }
+.temp { font-weight: 300; font-size: 3.6vw; line-height: 1; margin-right: 1.2vw; }
+.wx-meta { font-size: 1.05vw; color: #a89cae; line-height: 1.5; text-align: left; }
+
+.bottom { position: absolute; left: 0; right: 0; bottom: 0; }
+.rail-label { font-size: 1vw; letter-spacing: .16em; text-transform: uppercase; color: #a89cae; margin-bottom: 1.2vw; }
+.rail { display: -webkit-flex; display: flex; }
+.app {
+  position: relative; box-sizing: border-box; -webkit-flex: 1; flex: 1; margin-right: 1.3vw;
+  height: 11vw; border-radius: 1.1vw; padding: 1.3vw 1.4vw;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10);
+  display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+  -webkit-justify-content: space-between; justify-content: space-between;
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), background-color .22s, border-color .22s, box-shadow .22s;
+}
+.app:last-child { margin-right: 0; }
+.app.hero { -webkit-flex: 1.55; flex: 1.55; background-image: linear-gradient(140deg, rgba(242,182,107,.20), rgba(232,138,138,.10) 70%); }
+.mark { width: 2.8vw; height: 2.8vw; border-radius: .7vw; text-align: center; line-height: 2.8vw; font-weight: 700; font-size: 1.3vw; color: #17121f; }
+.name { font-weight: 500; font-size: 1.45vw; }
+.hero .name { font-size: 1.9vw; }
+.sub { font-size: .95vw; color: #a89cae; margin-top: .3vw; }
+.app.focus {
+  transform: translateY(-.5vw) scale(1.04);
+  background-color: rgba(255,255,255,.12); border-color: rgba(242,182,107,.85);
+  box-shadow: 0 1.4vw 3vw -1vw rgba(0,0,0,.6), 0 0 0 .2vw rgba(242,182,107,.25);
+}
+.hint { position: absolute; right: 1.4vw; top: 1.2vw; font-size: .85vw; color: #f2b66b; opacity: 0; transition: opacity .2s; }
+.app.focus .hint { opacity: 1; }
+.toast { position: absolute; left: 50%; bottom: 1.2vw; transform: translateX(-50%); font-size: 1.05vw; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.10); padding: .7vw 1.4vw; border-radius: 99px; opacity: 0; transition: opacity .25s; white-space: nowrap; }
+.toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<canvas id="dust"></canvas>
+<div class="screen">
+  <div>
+    <div class="time disp" id="time">--:--</div>
+    <div class="date" id="date"></div>
+    <div class="greet disp" id="greet"></div>
+  </div>
+  <div class="side">
+    <div class="weather" id="weather" style="visibility:hidden">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="30" cy="16" r="9" fill="none" stroke="#f2b66b" stroke-width="2.5"/>
+        <path d="M12 36h22a7 7 0 0 0 0-14 10 10 0 0 0-19 3 5.5 5.5 0 0 0-3 11z" fill="#17121f" stroke="#f3ece4" stroke-width="2.5" stroke-linejoin="round"/>
+      </svg>
+      <div class="temp disp" id="temp"></div>
+      <div class="wx-meta"><span id="wxcity"></span><br><span id="wxdesc"></span></div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="rail-label">Uygulamalar</div>
+    <div class="rail">
+      <div class="app hero focus" data-kind="tizentube" data-label="YouTube">
+        <span class="hint">OK ile aç</span>
+        <div class="mark" style="background:#f2b66b">&#9654;</div>
+        <div><div class="name disp">YouTube</div><div class="sub">Reklamsız · TizenTube</div></div>
+      </div>
+      <div class="app" data-id="3201907018807" data-label="Netflix">
+        <span class="hint">OK</span><div class="mark" style="background:#e88a8a">N</div><div class="name disp">Netflix</div>
+      </div>
+      <div class="app" data-id="3201901017640" data-label="Disney+">
+        <span class="hint">OK</span><div class="mark" style="background:#9cc3e8">D</div><div class="name disp">Disney+</div>
+      </div>
+      <div class="app" data-id="3201910019365" data-label="Prime Video">
+        <span class="hint">OK</span><div class="mark" style="background:#c9b8e8">P</div><div class="name disp">Prime Video</div>
+      </div>
+      <div class="app" data-id="3201606009684" data-label="Spotify">
+        <span class="hint">OK</span><div class="mark" style="background:#9fd3a8">S</div><div class="name disp">Spotify</div>
+      </div>
+      <div class="app" data-id="3201807016597" data-label="Apple TV">
+        <span class="hint">OK</span><div class="mark" style="background:#e8d9b8">A</div><div class="name disp">Apple TV</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  var days = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+  var months = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function tick() {
+    var n = new Date(), h = n.getHours();
+    document.getElementById("time").textContent = pad(h) + ":" + pad(n.getMinutes());
+    document.getElementById("date").textContent = days[n.getDay()] + " · " + n.getDate() + " " + months[n.getMonth()];
+    var part = h < 6 ? "İyi geceler" : h < 12 ? "Günaydın" : h < 18 ? "İyi günler" : "İyi akşamlar";
+    document.getElementById("greet").innerHTML = part + ". <em>Bugünlük sahne senin.</em>";
+  }
+  tick(); setInterval(tick, 10000);
+
+  // ---- weather (Open-Meteo, no key) ----
+  var WX = { 0: "Açık", 1: "Az bulutlu", 2: "Parçalı bulutlu", 3: "Kapalı", 45: "Sisli", 48: "Kırağılı sis",
+    51: "Hafif çisenti", 53: "Çisenti", 55: "Yoğun çisenti", 61: "Hafif yağmur", 63: "Yağmurlu", 65: "Sağanak",
+    66: "Dondurucu yağmur", 67: "Dondurucu yağmur", 71: "Hafif kar", 73: "Karlı", 75: "Yoğun kar", 77: "Kar taneleri",
+    80: "Sağanak", 81: "Sağanak", 82: "Şiddetli sağanak", 85: "Kar sağanağı", 86: "Kar sağanağı", 95: "Gök gürültülü", 96: "Dolu", 99: "Dolu" };
+  function getJSON(url, cb) {
+    var x = new XMLHttpRequest();
+    x.open("GET", url);
+    x.onload = function () { try { cb(JSON.parse(x.responseText)); } catch (e) {} };
+    x.send();
+  }
+  var loc = null;
+  function weather() {
+    if (!loc) {
+      getJSON("https://ipwho.is/", function (g) {
+        if (!g || !g.success) return;
+        loc = { lat: g.latitude, lon: g.longitude, city: g.city || "" };
+        weather();
+      });
+      return;
+    }
+    getJSON("https://api.open-meteo.com/v1/forecast?latitude=" + loc.lat + "&longitude=" + loc.lon + "&current=temperature_2m,weather_code&timezone=auto", function (d) {
+      var c = d.current;
+      document.getElementById("temp").textContent = Math.round(c.temperature_2m) + "°";
+      document.getElementById("wxcity").textContent = loc.city;
+      document.getElementById("wxdesc").textContent = WX[c.weather_code] || "";
+      document.getElementById("weather").style.visibility = "visible";
+    });
+  }
+  weather(); setInterval(weather, 30 * 60 * 1000);
+
+  // ---- toast ----
+  var toastEl = document.getElementById("toast"), tt;
+  function toast(msg, ms) {
+    toastEl.textContent = msg; toastEl.className = "toast on";
+    clearTimeout(tt); tt = setTimeout(function () { toastEl.className = "toast"; }, ms || 2200);
+  }
+
+  // ---- launching ----
+  function launchTizenTube() {
+    var done = false;
+    var ws;
+    try { ws = new WebSocket("ws://" + location.host); } catch (e) { toast("TizenBrew'a bağlanılamadı"); return; }
+    var timer = setTimeout(function () { if (!done) { done = true; try { ws.close(); } catch (e) {} toast("TizenTube bulunamadı"); } }, 8000);
+    ws.onopen = function () { ws.send(JSON.stringify({ type: 4, payload: false })); };
+    ws.onmessage = function (ev) {
+      var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (msg.type !== 4 || done) return;
+      var list = msg.payload || [], mod = null;
+      for (var i = 0; i < list.length; i++) if (/tizentube/i.test(list[i].fullName || "")) mod = list[i];
+      if (!mod) { // cache empty: ask the service to load modules fresh
+        if (!ws._retried) { ws._retried = true; ws.send(JSON.stringify({ type: 4, payload: true })); return; }
+        done = true; clearTimeout(timer); toast("TizenTube bulunamadı"); return;
+      }
+      done = true; clearTimeout(timer);
+      try { for (var k = 0; k < (mod.keys || []).length; k++) tizen.tvinputdevice.registerKey(mod.keys[k]); } catch (e) {}
+      ws.send(JSON.stringify({ type: 5, payload: mod }));
+      if (!mod.evaluateScriptOnDocumentStart) setTimeout(function () { location.href = mod.appPath; }, 150);
+    };
+    ws.onerror = function () { if (!done) { done = true; clearTimeout(timer); toast("TizenBrew'a bağlanılamadı"); } };
+  }
+  function launchApp(id, label) {
+    try {
+      tizen.application.launch(id, function () {}, function (e) { toast(label + " açılamadı"); });
+    } catch (e) { toast(label + " açılamadı"); }
+  }
+  function open(el) {
+    toast(el.getAttribute("data-label") + " açılıyor…", 1500);
+    if (el.getAttribute("data-kind") === "tizentube") launchTizenTube();
+    else launchApp(el.getAttribute("data-id"), el.getAttribute("data-label"));
+  }
+
+  // ---- remote navigation ----
+  var apps = document.querySelectorAll(".app"), i = 0;
+  function focusAt(k) { apps[i].classList.remove("focus"); i = (k + apps.length) % apps.length; apps[i].classList.add("focus"); }
+  document.addEventListener("keydown", function (e) {
+    if (e.keyCode === 39) { focusAt(i + 1); e.preventDefault(); }
+    else if (e.keyCode === 37) { focusAt(i - 1); e.preventDefault(); }
+    else if (e.keyCode === 13) { open(apps[i]); e.preventDefault(); }
+    else if (e.keyCode === 10009) { try { tizen.application.getCurrentApplication().exit(); } catch (x) {} }
+  });
+  for (var a = 0; a < apps.length; a++) (function (k) {
+    apps[k].addEventListener("click", function () { focusAt(k); open(apps[k]); });
+  })(a);
+
+  // ---- drifting dust in the spotlight ----
+  var c = document.getElementById("dust"), x = c.getContext("2d"), W, H, ps = [];
+  function size() {
+    W = c.width = window.innerWidth; H = c.height = window.innerHeight; ps = [];
+    for (var n = 0; n < 70; n++) ps.push({ x: W * (.45 + Math.random() * .5), y: Math.random() * H * .8, r: Math.random() * 1.4 + .3, v: Math.random() * .25 + .05, a: Math.random() });
+  }
+  function draw() {
+    x.clearRect(0, 0, W, H);
+    for (var n = 0; n < ps.length; n++) {
+      var p = ps[n];
+      p.y -= p.v; p.x += Math.sin((p.y + p.a * 500) / 120) * .15;
+      if (p.y < 0) p.y = H * .8;
+      x.fillStyle = "rgba(242,182,107," + (0.25 + 0.35 * p.a) + ")";
+      x.beginPath(); x.arc(p.x, p.y, p.r, 0, 7); x.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  size(); draw(); window.addEventListener("resize", size);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "salon-tv",
+  "version": "1.0.0",
+  "description": "Salon TV başlangıç ekranı: saat, hava durumu ve uygulama kartları.",
+  "packageType": "app",
+  "appName": "Salon TV",
+  "appPath": "app/index.html",
+  "keys": []
+}
